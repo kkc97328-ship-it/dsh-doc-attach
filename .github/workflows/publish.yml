@@ -1,0 +1,112 @@
+# Publish dsh-doc-attach to npm with Trusted Publishing (OIDC).
+#
+# WHY OIDC RATHER THAN A TOKEN
+# A long-lived granular access token that bypasses 2FA is what this project
+# shipped 0.1.0 with, and it is a dead end: npm states that direct publishing
+# with such a token is removed in January 2027, and the token itself expires.
+# Trusted Publishing exchanges a short-lived OIDC token minted by GitHub for
+# the right to publish one package from one workflow — no stored secret, and
+# nothing to rotate or leak.
+#
+# ONE-TIME SETUP ON npmjs.com (not automatable from here):
+#   Package page -> Settings -> Trusted Publisher -> GitHub Actions
+#     Organization or user : kkc97328-ship-it
+#     Repository           : dsh-doc-attach
+#     Workflow filename    : publish.yml      <- must match this file's name
+#     Environment          : (leave empty; this workflow declares none)
+#   If you set an environment on npm's side, add the same `environment:` here.
+#
+# RELEASING AFTER THAT:
+#   npm version patch && git push --follow-tags
+# or explicitly:
+#   git tag v0.2.0 && git push origin v0.2.0
+
+name: publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  # Manual runs exist to rehearse the whole job. `dry-run` defaults to true so a
+  # click cannot publish by accident.
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run every check but skip the npm publish step'
+        type: boolean
+        default: true
+
+# `id-token: write` is the entire mechanism: it lets this job request the OIDC
+# token npm exchanges for publish rights. Without it npm falls back to looking
+# for a stored token and fails with a 403 about two-factor authentication.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22 ships npm 10, which cannot do Trusted Publishing. Node 24
+          # ships npm 11; the guard below still checks, because the runner
+          # image is free to change what a version line contains.
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      # There is deliberately NO `npm ci`: this package has zero runtime
+      # dependencies and no lockfile, so `npm ci` would fail on a missing
+      # package-lock.json before reaching anything useful.
+
+      - name: Require npm 11.5.1 or newer
+        run: |
+          have="$(npm --version)"
+          echo "npm $have"
+          oldest="$(printf '%s\n' 11.5.1 "$have" | sort -V | head -1)"
+          if [ "$oldest" != "11.5.1" ]; then
+            echo "::error::npm $have is older than 11.5.1, which Trusted Publishing requires"
+            exit 1
+          fi
+
+      - name: Check the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(node -p "require('./package.json').version")"
+          echo "tag=$GITHUB_REF_NAME  package.json=$version"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version"
+            echo "::error::bump the version or move the tag; publishing a mismatch would ship the wrong number"
+            exit 1
+          fi
+
+      # Only the portable subset: four suites need fixtures that exist solely on
+      # a development machine (two real PDFs under a user profile, and the
+      # Office-shipped .doc/.ppt samples). Running them here would fail for
+      # reasons unrelated to the code. `--portable` is defined in tests/run-all.mjs.
+      - name: Run the portable test suites
+        run: node tests/run-all.mjs --portable
+
+      - name: Show what would be published
+        run: npm pack --dry-run
+
+      - name: Publish to npm
+        if: github.event_name == 'push' || inputs.dry-run == false
+        run: npm publish --access public
+
+      - name: Summary
+        run: |
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          {
+            echo "### dsh-doc-attach ${version}"
+            echo ""
+            if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.dry-run }}" = "false" ]; then
+              echo "Published https://www.npmjs.com/package/${name}"
+            else
+              echo "Dry run: every check passed, npm publish skipped."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
