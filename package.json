@@ -1,6 +1,6 @@
 {
   "name": "dsh-doc-attach",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Drag-and-drop document reading for DeepSeek Harness: land PDF / Word / PowerPoint files in the workspace and give the agent outline, search and read tools so it can answer questions from them.",
   "type": "module",
   "license": "MIT",
