@@ -2,17 +2,17 @@
 
 ## Before you start
 
-开发任何 Harness 插件前，可以先阅读 `docs/internal/dsh-doc-attach-dev-notes.md`，并按照其中的检查清单执行。
+开发任何 Harness 插件前，可以先阅读 `docs/dsh-doc-attach-dev-notes.md`，并按照其中的检查清单执行。
 
 That file holds the accumulated development notes for this plugin: the Cordis
 composition rules, the OOXML/OLE2 extraction pitfalls, the sandbox constraints,
-and the verification checklist. It is deliberately **not published** — it lives
-in `docs/internal/`, which is listed in `.gitignore`, so it exists only in a
-local working copy.
+and the verification checklist. It is published in **sanitized** form — local
+absolute paths and machine details are replaced with placeholders, and it
+contains no tokens, credentials or personal information.
 
-If the file is missing (for example, you cloned this repository fresh), the
-published `README.md` still describes the user-facing behaviour, and the test
-suites under `tests/` still encode the contracts.
+The **unsanitized** original is kept out of git at
+`docs/internal/dsh-doc-attach-dev-notes-original.md` (`docs/internal/` is listed
+in `.gitignore`), so it exists only in a local working copy — never in a clone.
 
 ## Quick orientation
 
