@@ -1,0 +1,12 @@
+# The `files` field in package.json is the authoritative whitelist for what the
+# npm tarball contains; npm ignores this file when `files` is present. It is
+# kept as a second, explicit statement of intent so a future edit to `files`
+# cannot quietly ship development material.
+tests/
+_probe/
+*.log
+__pycache__/
+*.py[cod]
+_tmp-drop-*/
+_tmp-*/
+.DS_Store

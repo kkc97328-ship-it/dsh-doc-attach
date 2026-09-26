@@ -1,0 +1,22 @@
+# Build and install artefacts
+node_modules/
+
+# Python bytecode from the helper scripts
+__pycache__/
+*.py[cod]
+
+# Scratch directories the test suites create beside the package
+_tmp-drop-*/
+_tmp-*/
+
+# Local editor and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs and local environment overrides
+*.log
+npm-debug.log*
+.env
+.env.*

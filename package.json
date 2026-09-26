@@ -1,0 +1,78 @@
+{
+  "name": "dsh-doc-attach",
+  "version": "0.1.0",
+  "description": "Drag-and-drop document reading for DeepSeek Harness: land PDF / Word / PowerPoint files in the workspace and give the agent outline, search and read tools so it can answer questions from them.",
+  "type": "module",
+  "license": "MIT",
+  "author": "kkc97328-ship-it (https://github.com/kkc97328-ship-it)",
+  "homepage": "https://github.com/kkc97328-ship-it/dsh-doc-attach#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kkc97328-ship-it/dsh-doc-attach.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kkc97328-ship-it/dsh-doc-attach/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "document-qa",
+    "pdf",
+    "docx",
+    "doc",
+    "pptx",
+    "ppt",
+    "rag",
+    "agent-tools"
+  ],
+  "main": "./lib/host.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  },
+  "exports": {
+    ".": "./lib/host.js",
+    "./client": "./lib/client.js",
+    "./plugins/*": "./plugins/*",
+    "./lib/*": "./lib/*",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/*.js",
+    "lib/extract/*.mjs",
+    "lib/extract/*.py",
+    "plugins/*.mjs",
+    "cordis.patch.yml",
+    "install.ps1",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node tests/run-all.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-client-ui-conversation": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-client-ui-conversation": {
+      "optional": true
+    }
+  }
+}

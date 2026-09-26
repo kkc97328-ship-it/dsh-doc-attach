@@ -1,0 +1,15 @@
+# Normalise line endings for a cross-platform package: text files are stored
+# with LF in the repository regardless of the authoring platform, which keeps
+# diffs and the published tarball identical everywhere.
+* text=auto eol=lf
+
+# Windows launcher keeps CRLF so it runs in Windows PowerShell without fuss.
+*.ps1 text eol=crlf
+
+# Binary assets must never be line-ending converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pptx binary
+*.docx binary
+*.pdf binary

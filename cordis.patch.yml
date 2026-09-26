@@ -1,0 +1,43 @@
+# dsh-doc-attach bundle patch — install with
+#   dsh plugin --profile web add <path or git spec>
+# Applied as a profile bundle layer; every row resolves inside this package,
+# so no absolute paths are needed.
+#
+# The browser half needs the package-ROOT row below, not just the subpath rows.
+# The client-module registry attributes a loader entry to a package by
+# resolving `<entry name>/package.json`; a subpath entry name such as
+# `dsh-doc-attach/plugins/read-document.mjs` resolves nothing and is cached as
+# "not a client package" — a negative verdict that NEVER expires. Only an entry
+# whose name IS the bare package name lets the scan read `dsh.client` and find
+# `exports["./client"]`, which is why every shipped browser plugin carries one.
+#
+# Activation note: client package metadata is cached per name and never
+# expires, so adding or fixing the browser half takes a host RESTART.
+- insert:
+    # The package-root row. Its host entry (`exports["."]` → lib/host.js) is an
+    # empty apply() by design, matching the shipped convention for browser-only
+    # packages: this row exists so the package is recognizable as a client
+    # package, not to do host work.
+    - id: dsh-doc-attach
+      name: 'dsh-doc-attach'
+
+    # Retrieval tools: document_outline / document_search / document_read.
+    # Registering on the host plane (rather than in an agent preset) is what
+    # makes them available in every workspace and every session.
+    - id: dsh-doc-attach-tools
+      name: 'dsh-doc-attach/plugins/read-document.mjs'
+      config:
+        defaultWindow: 12
+        maxWindow: 120
+        maxBlockChars: 12000
+        defaultMaxHits: 20
+        timeoutMs: 60000
+
+    # Browser upload endpoint: POST /api/doc-attach/upload lands a dropped
+    # document in the active session's workspace.
+    - id: dsh-doc-attach-drop
+      name: 'dsh-doc-attach/plugins/drop-ingest.mjs'
+      config:
+        routePath: /api/doc-attach
+        dropDirName: .dsh-drops
+        maxBytes: 67108864
