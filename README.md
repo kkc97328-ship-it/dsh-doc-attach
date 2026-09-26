@@ -248,15 +248,17 @@ document_read      { path: "D:/docs/plan.docx", start: 22, count: 6 }
 
 ## Development
 
-**[Development notes](https://github.com/kkc97328-ship-it/dsh-doc-attach/blob/main/docs/dsh-doc-attach-dev-notes.md)**
+Development notes are kept in a **local-only** file, `docs/internal/dsh-doc-attach-dev-notes.md`
 — a written record of how this plugin was built: the packaging and slot contracts
 it has to satisfy, every pitfall hit along the way (and the root cause of each),
 reusable snippets for registering a browser slot or an agent tool, a pre-flight
 checklist for the next Harness plugin, and the release flow including OIDC
 trusted publishing.
 
-(An absolute URL on purpose: a relative `docs/...` link renders correctly on
-GitHub but 404s on the npm package page.)
+`docs/internal/` is listed in `.gitignore`, so those notes are deliberately
+absent from this repository and from the published package: they describe a
+local working environment and are not intended to be public. Clone this
+repository and they are simply not there.
 
 There is **no build step**: the host half is plain ESM and the browser half is a
 hand-written classic script, loaded as-is by the client module system. Python

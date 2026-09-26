@@ -9,6 +9,9 @@ __pycache__/
 _tmp-drop-*/
 _tmp-*/
 
+# Internal development notes: kept on disk, never published
+docs/internal/
+
 # Local editor and OS noise
 .DS_Store
 Thumbs.db
