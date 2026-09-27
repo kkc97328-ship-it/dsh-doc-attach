@@ -7,6 +7,25 @@ Works in **every workspace and every session**, because both halves sit on
 global planes (the tools registry and the browser plugin roster), not in an
 agent preset.
 
+## Install
+
+```bash
+dsh plugin --profile web add dsh-doc-attach
+```
+
+Or install straight from this repository — a clone carries everything the npm
+tarball does, plus the test suites:
+
+```bash
+dsh plugin --profile web add github:kkc97328-ship-it/dsh-doc-attach
+```
+
+**Restart the harness host afterwards**, then reload the page: client package
+metadata is cached per name and never expires, so the browser half appears only
+after a restart. Requirements, the `git clone` route, and the offline
+(no-network) installer are under
+[Install from npm or GitHub](#install-from-npm-or-github).
+
 ## What it adds
 
 **In the GUI** — drop a `.pdf` / `.docx` / `.pptx` onto the page, or paste one
