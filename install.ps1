@@ -1,6 +1,6 @@
 # Install dsh-doc-attach into the web profile.
 #
-# Why a manual copy instead of `dsh plugin add`: this machine has no reachable
+# Why a manual copy instead of `dsh plugin --profile web add`: this machine has no reachable
 # npm registry (verified: `npm view` exits 1, HTTPS to registry.npmjs.org is
 # closed), so any install path that resolves dependencies over the network will
 # fail or hang. Third-party bundles are resolved by NAME from the profile's

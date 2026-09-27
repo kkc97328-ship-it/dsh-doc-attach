@@ -118,4 +118,5 @@ if ($SkipNpm) {
 Head 'done'
 Step "GitHub : https://github.com/$Owner/$Repo"
 if (-not $SkipNpm) { Step "npm    : https://www.npmjs.com/package/$($manifest.name)" }
-Step "install: dsh plugin add $($manifest.name)   (or: pnpm add $($manifest.name))"
+Step "install: dsh plugin --profile web add $($manifest.name)"
+Step "         dsh plugin --profile web add github:$Owner/$Repo    (github spec; the profile name is yours to choose)"
