@@ -18,13 +18,13 @@
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
 import { buildTools, apply, toAbsolute } from '../plugins/read-document.mjs'
-import { PDF_FIXTURES, PYTHON, cleanUp, ensureDocxFixture, scratchDir, suite } from './fixture.mjs'
+import { PDF_FIXTURES, PYTHON, cleanUp, describePdfFixtures, ensureDocxFixture, scratchDir, suite } from './fixture.mjs'
 
 const SCRATCH = scratchDir('toolscratch')
 const DOCX = ensureDocxFixture(SCRATCH)
 
 const { check, finish } = suite('Document tool verification')
-console.log(`pdf  : ${PDF_FIXTURES.paper} (exists=${existsSync(PDF_FIXTURES.paper)})`)
+console.log(`pdf  : ${describePdfFixtures().paper}`)
 console.log(`docx : ${DOCX}`)
 console.log('')
 

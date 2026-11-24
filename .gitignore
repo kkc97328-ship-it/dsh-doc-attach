@@ -9,6 +9,9 @@ __pycache__/
 _tmp-drop-*/
 _tmp-*/
 
+# Real local fixtures: absolute paths on a developer's machine, never published
+tests/fixtures.local.json
+
 # Internal development notes: kept on disk, never published
 docs/internal/
 

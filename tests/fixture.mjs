@@ -7,7 +7,7 @@
  * spawn would fail with EPERM before Python ever ran.
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -23,10 +23,66 @@ const HERE = dirname(fileURLToPath(import.meta.url))
  */
 export const PYTHON = process.env.DSH_DOC_PYTHON ?? 'python'
 
-/** Real PDFs already present on this machine, used as read-only fixtures. */
+/**
+ * Optional local PDF fixtures.
+ *
+ * These are real documents that live on a developer's machine, so their paths
+ * must not be committed — an earlier revision of this very file published a
+ * user name and two personal document paths. They are supplied instead by
+ * `tests/fixtures.local.json` (git-ignored) or by the environment, and the
+ * checks that need them report SKIP when they are absent. An honest gap beats a
+ * green run that silently did not run.
+ *
+ * Shape of the local file:
+ *   { "pdf": { "paper": "<absolute path>", "cjk": "<absolute path>" } }
+ */
+const LOCAL_FIXTURES = join(HERE, 'fixtures.local.json')
+
+/** Tagged error: `check` turns this into a SKIP rather than a failure. */
+export const FIXTURE_MISSING = 'FIXTURE_MISSING'
+
+/** The optional local fixture map, or {} when the developer has not made one. */
+function readLocalFixtures() {
+  try {
+    return JSON.parse(readFileSync(LOCAL_FIXTURES, 'utf8'))
+  } catch {
+    return {}
+  }
+}
+
+const LOCAL = readLocalFixtures()
+
+/** One optional PDF fixture's path, or a tagged error naming what to configure. */
+function optionalPdf(role, envName) {
+  const fromEnv = process.env[envName]
+  const fromFile = LOCAL?.pdf?.[role]
+  if (typeof fromEnv === 'string' && fromEnv !== '') return fromEnv
+  if (typeof fromFile === 'string' && fromFile !== '') return fromFile
+  throw Object.assign(
+    new Error(`no ${role} PDF fixture — set ${envName} or tests/fixtures.local.json`),
+    { code: FIXTURE_MISSING },
+  )
+}
+
+/**
+ * Real PDFs, when this machine has them. Reading a property throws a tagged
+ * error if the fixture is absent; `check` reports that as SKIP.
+ */
 export const PDF_FIXTURES = {
-  cjk: 'C:\\Users\\LiJia-Chen\\Downloads\\学员须知.pdf',
-  paper: 'C:\\Users\\LiJia-Chen\\Downloads\\2412.19437v2.pdf',
+  get paper() { return optionalPdf('paper', 'DSH_DOC_PDF') },
+  get cjk() { return optionalPdf('cjk', 'DSH_DOC_PDF_CJK') },
+}
+
+/** A suite header summary that never throws on a missing fixture. */
+export function describePdfFixtures() {
+  const show = (role, envName) => {
+    try {
+      return optionalPdf(role, envName)
+    } catch {
+      return '(absent — dependent checks will SKIP)'
+    }
+  }
+  return { paper: show('paper', 'DSH_DOC_PDF'), cjk: show('cjk', 'DSH_DOC_PDF_CJK') }
 }
 
 /**
@@ -103,6 +159,7 @@ export function cleanUp(dir) {
 export function suite(title) {
   let passed = 0
   let failed = 0
+  let skipped = 0
   console.log(title)
   console.log('')
   return {
@@ -112,6 +169,15 @@ export function suite(title) {
         passed += 1
         console.log(`  PASS  ${name}`)
       } catch (error) {
+        // A missing optional fixture is a gap in coverage, not a defect. Report
+        // it as SKIP and keep the count visible, so nobody mistakes a shrunken
+        // suite for a passing one.
+        if (error?.code === FIXTURE_MISSING) {
+          skipped += 1
+          console.log(`  SKIP  ${name}`)
+          console.log(`        ${error.message}`)
+          return
+        }
         failed += 1
         console.log(`  FAIL  ${name}`)
         console.log(`        ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`)
@@ -119,7 +185,8 @@ export function suite(title) {
     },
     finish() {
       console.log('')
-      console.log(`${passed} passed, ${failed} failed`)
+      const suffix = skipped > 0 ? `, ${skipped} skipped` : ''
+      console.log(`${passed} passed, ${failed} failed${suffix}`)
       process.exit(failed === 0 ? 0 : 1)
     },
   }

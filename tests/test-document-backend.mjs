@@ -17,16 +17,17 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { DocumentExtractionError, PythonDocumentBackend } from '../lib/extract/document-python.mjs'
-import { PDF_FIXTURES, PYTHON, cleanUp, ensureDocxFixture, scratchDir, suite } from './fixture.mjs'
+import { PDF_FIXTURES, PYTHON, cleanUp, describePdfFixtures, ensureDocxFixture, scratchDir, suite } from './fixture.mjs'
 
 const CACHE = scratchDir('cache')
 const SCRATCH = scratchDir('scratch')
 const DOCX = ensureDocxFixture(SCRATCH)
 
 const { check, finish } = suite('Document backend verification')
+const pdfs = describePdfFixtures()
 console.log(`interpreter: ${PYTHON} (exists=${existsSync(PYTHON)})`)
-console.log(`pdf cjk    : ${PDF_FIXTURES.cjk} (exists=${existsSync(PDF_FIXTURES.cjk)})`)
-console.log(`pdf paper  : ${PDF_FIXTURES.paper} (exists=${existsSync(PDF_FIXTURES.paper)})`)
+console.log(`pdf cjk    : ${pdfs.cjk}`)
+console.log(`pdf paper  : ${pdfs.paper}`)
 console.log(`docx       : ${DOCX}`)
 console.log('')
 
