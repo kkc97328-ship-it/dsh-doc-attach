@@ -135,6 +135,34 @@ export function ensureXlsxFixture(directory) {
 }
 
 /**
+ * Build the synthetic legacy Word fixture once and return its path.
+ *
+ * The CFB container, FIB and piece table are written by hand (see
+ * `cfb_writer.py` and `make-doc-fixture.py`), which is the only way to cover
+ * Word's 8-bit compressed piece: no real Chinese document produces one.
+ *
+ * @param {string} [directory] Where to write it; a temp dir by default.
+ * @returns {string} absolute path to the .doc.
+ */
+export function ensureDocFixture(directory) {
+  return ensureGenerated('make-doc-fixture.py', 'fixture.doc', directory)
+}
+
+/**
+ * Build the synthetic legacy PowerPoint fixture once and return its path.
+ *
+ * One block per Escher text container (record type 61453). A reader that
+ * grouped by `SlideListWithText` instead would collapse this deck into a single
+ * block, which is the regression the fixture exists to catch.
+ *
+ * @param {string} [directory] Where to write it; a temp dir by default.
+ * @returns {string} absolute path to the .ppt.
+ */
+export function ensurePptFixture(directory) {
+  return ensureGenerated('make-ppt-fixture.py', 'fixture.ppt', directory)
+}
+
+/**
  * A scratch directory the caller removes when finished.
  * @param {string} label - prefix, so a leftover dir says which suite made it.
  * @returns {string} absolute path.

@@ -4,45 +4,40 @@
  * Run: node dsh-doc-attach/tests/test-doc-format.mjs
  *
  * `.doc` is OLE2/CFB rather than OOXML, so it goes through its own reader and
- * deserves its own checks. It also has a real fixture problem: a .doc cannot be
- * GENERATED on this machine — Word COM automation hangs without an interactive
- * desktop, and antiword/LibreOffice every Python .doc library are absent — so
- * the suite uses whatever real .doc files it can find and skips honestly when
- * there are none, rather than asserting against a fixture it invented.
+ * deserves its own checks.
  *
- * Candidate order:
- *   1. $DSH_DOC_FIXTURE, for a richer local document
- *   2. the Office-shipped template, which is real, small, and not personal
+ * The fixture is GENERATED: `make-doc-fixture.py` writes the CFB container, the
+ * FIB and the piece table by hand (see `cfb_writer.py`). That closes two gaps
+ * this suite used to document. A hand-written piece table can hold BOTH piece
+ * encodings, so the COMPRESSED 8-bit branch is now covered end to end — no real
+ * Chinese .doc produces one. And the fixture exists on every machine, so the
+ * suite no longer skips in CI.
  *
- * Known coverage gap, stated rather than hidden: every real .doc available here
- * stores text as UTF-16 pieces (Chinese documents cannot produce Word's 8-bit
- * "compressed" pieces), so that decode branch is exercised only by the reader's
- * own unit path, not by an end-to-end document.
+ * A real Word-produced document is still the better proof that this reads what
+ * Office writes, so when an Office template is present its parse is checked too.
+ * That check reports SKIP rather than failing on a machine without Office.
  */
 import assert from 'node:assert/strict'
 import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { DocumentExtractionError, PythonDocumentBackend } from '../lib/extract/document-python.mjs'
 import { buildTools } from '../plugins/read-document.mjs'
-import { PYTHON, cleanUp, scratchDir, suite } from './fixture.mjs'
+import { FIXTURE_MISSING, PYTHON, cleanUp, ensureDocFixture, scratchDir, suite } from './fixture.mjs'
 
 const SCRATCH = scratchDir('docfmt')
 
-/** Real .doc files to try, best first. None is personal content. */
-const CANDIDATES = [
-  process.env.DSH_DOC_FIXTURE,
+/** The generated document; deterministic and covered on every machine. */
+const GENERATED = ensureDocFixture(SCRATCH)
+
+/** A real Word-produced document, when this machine happens to have Office. */
+const REAL = [
   'C:\\Program Files\\Microsoft Office\\root\\Office16\\2052\\PROTTPLN.DOC',
   'C:\\Program Files\\Microsoft Office\\root\\Office16\\2052\\PROTTPLV.DOC',
   'C:\\Program Files (x86)\\Microsoft Office\\root\\Office16\\2052\\PROTTPLN.DOC',
-].filter(candidate => typeof candidate === 'string' && candidate !== '')
+].find(candidate => existsSync(candidate))
 
-const DOC = CANDIDATES.find(candidate => existsSync(candidate))
-if (DOC === undefined) {
-  console.log('legacy .doc verification: SKIPPED — no .doc fixture found.')
-  console.log(`  set DSH_DOC_FIXTURE to a real .doc to run this suite. Tried: ${CANDIDATES.join(', ')}`)
-  cleanUp(SCRATCH)
-  process.exit(0)
-}
+/** A richer local document may still be supplied for a deeper run. */
+const DOC = process.env.DSH_DOC_FIXTURE ?? GENERATED
 
 const { check, finish } = suite('Legacy .doc verification')
 console.log(`fixture: ${DOC}`)
@@ -164,6 +159,20 @@ await check('a legacy .doc the reader cannot parse reports its own code', async 
     (error) => error instanceof DocumentExtractionError
       && (error.code === 'NOT_FOUND' || error.code === 'UNREADABLE'),
   )
+})
+
+// ── a real Word-produced file, when this machine has one ──────────────────
+await check('a real Word-produced .doc also parses', async () => {
+  if (REAL === undefined) {
+    throw Object.assign(
+      new Error('no Office .doc template here — set DSH_DOC_FIXTURE to a real .doc'),
+      { code: FIXTURE_MISSING },
+    )
+  }
+  const stats = await backend().stats(REAL)
+  assert.equal(stats.format, 'doc')
+  assert.equal(stats.textLayer, true)
+  assert.ok(stats.blockCount > 0, 'the Office template yields at least one block')
 })
 
 cleanUp(SCRATCH)

@@ -34,10 +34,10 @@ const SUITES = [
   ['drop-ingest endpoint (upload + security)', 'test-drop-ingest.mjs', true],
   ['client bundle (drop / paste / upload / draft)', 'test-client-bundle.mjs', true],
   ['spreadsheet .xlsx (rows / worksheets / citations)', 'test-xlsx-format.mjs', true],
-  // Below: need this machine's fixtures (real PDFs, Office .doc/.ppt samples).
+  ['legacy .doc (CFB container / FIB / piece table)', 'test-doc-format.mjs', true],
+  ['PowerPoint (.pptx and legacy .ppt)', 'test-ppt-format.mjs', true],
+  // Below: need a real PDF from a developer's machine (tests/fixtures.local.json).
   ['document backend (extract / search / stats)', 'test-document-backend.mjs', false],
-  ['legacy .doc (OLE2 container reader)', 'test-doc-format.mjs', false],
-  ['PowerPoint (.pptx and legacy .ppt)', 'test-ppt-format.mjs', false],
   ['host tools (outline / search / read + QA flow)', 'test-document-tools.mjs', false],
 ]
 
