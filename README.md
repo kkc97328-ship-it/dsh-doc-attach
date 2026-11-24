@@ -130,11 +130,11 @@ the piece table, decoding both UTF-16 and 8-bit code-page pieces.
   edit Master title style"), because the master's drawing reaches the same
   record type as slide drawings. Producer-internal labels (`___PPT<n>`,
   `Equation.<n>`) and placeholder-only blocks are filtered; master prose is not.
-- **The `.doc` 8-bit "compressed" piece branch has no end-to-end fixture.**
-  Every real `.doc` available on the target machine stores UTF-16 pieces —
-  Chinese documents cannot produce compressed pieces — and a synthetic `.doc`
-  cannot be generated there because Word COM hangs. The branch is implemented
-  and unit-reachable, but not covered by a real document.
+- **The `.doc` 8-bit "compressed" piece branch is covered by a generated
+  fixture, not by a real document.** Chinese documents cannot produce compressed
+  pieces, so `tests/make-doc-fixture.py` writes a piece table containing one, by
+  hand (see `tests/cfb_writer.py`). Real Word output available here still only
+  exercises the UTF-16 branch.
 - PDF reading depends on a local Python with PyPDF2; Word and PowerPoint reading
   need only the standard library. Set `DSH_DOC_PYTHON` (or the row's
   `pythonPath`) to point at a suitable interpreter.
@@ -142,9 +142,13 @@ the piece table, decoding both UTF-16 and 8-bit code-page pieces.
 ## Install (offline, Windows)
 
 ```powershell
-pwsh -File install.ps1 -DryRun   # report only
-pwsh -File install.ps1           # place the package, register the bundle
+.\install.ps1 -DryRun   # report only
+.\install.ps1           # place the package, register the bundle
 ```
+
+`pwsh` is PowerShell 7; Windows ships PowerShell 5.1, where that command does
+not exist. If script execution is blocked, run
+`powershell -ExecutionPolicy Bypass -File .\install.ps1`.
 
 Then **restart the host**: client package metadata is cached per name and never
 expires, so the browser half appears only after a restart.

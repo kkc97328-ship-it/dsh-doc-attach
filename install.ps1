@@ -1,4 +1,4 @@
-# Install dsh-doc-attach into the web profile.
+﻿# Install dsh-doc-attach into the web profile.
 #
 # Why a manual copy instead of `dsh plugin --profile web add`: this machine has no reachable
 # npm registry (verified: `npm view` exits 1, HTTPS to registry.npmjs.org is
@@ -8,9 +8,12 @@
 # `cleverer-dsh/plugins/*.mjs` — so placing the directory there and listing the
 # name as a bundle is sufficient.
 #
-# Usage:
-#   pwsh -File install.ps1 -DryRun     # report only, change nothing
-#   pwsh -File install.ps1             # apply, then restart dsh web
+# Usage (Windows PowerShell 5.1, which is what Windows ships; `pwsh` is
+# PowerShell 7 and is frequently absent, so these commands do not use it):
+#   .\install.ps1 -DryRun     # report only, change nothing
+#   .\install.ps1             # apply, then restart dsh web
+# If script execution is blocked:
+#   powershell -ExecutionPolicy Bypass -File .\install.ps1
 [CmdletBinding()]
 param(
     [switch]$DryRun,

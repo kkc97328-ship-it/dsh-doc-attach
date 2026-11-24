@@ -1,4 +1,4 @@
-# Publish dsh-doc-attach to GitHub and npm.
+﻿# Publish dsh-doc-attach to GitHub and npm.
 #
 # WHY THIS SCRIPT EXISTS
 # It was authored on a machine where none of the publishing steps could run:
@@ -9,8 +9,11 @@
 #
 # Run it on a machine that can reach GitHub and npm, from inside the repository:
 #
-#   pwsh -File publish.ps1 -DryRun    # preflight only, changes nothing
-#   pwsh -File publish.ps1            # create the repo, push, tag, publish
+#   .\publish.ps1 -DryRun    # preflight only, changes nothing
+#   .\publish.ps1            # create the repo, push, tag, publish
+#
+# `pwsh` is PowerShell 7, which Windows does not ship; the commands above use
+# the 5.1 host every Windows install already has.
 #
 # Every step is idempotent enough to re-run after a failure.
 [CmdletBinding()]
