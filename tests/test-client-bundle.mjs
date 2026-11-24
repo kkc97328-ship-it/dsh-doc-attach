@@ -46,6 +46,12 @@ function makeReact() {
     __begin: () => { cursor = 0 },
     __slots: () => slots,
     createElement(type, props, ...children) {
+      // Resolve plain function components, so the suite can assert on the text a
+      // user would actually see instead of on an unresolved element. Only
+      // hook-free components may be resolved this way: a child that called a
+      // hook would share this cursor and desynchronise the parent's slots. The
+      // card component is hook-free by design.
+      if (typeof type === 'function') return type({ ...props, children })
       return { type, props: props ?? {}, children }
     },
     useState(initial) {
@@ -383,6 +389,119 @@ await check('pasting a screenshot is left to the image channel', async () => {
   await new Promise(resolve => setTimeout(resolve, 20))
   assert.equal(prevented, false, 'the image paste must not be swallowed')
   assert.equal(requests.length, 0, 'and must not be uploaded here')
+})
+
+// ── the card rail ─────────────────────────────────────────────────────────
+/** Every string in a rendered tree, in document order. */
+function treeText(node, out = []) {
+  if (node === null || node === undefined) return out
+  if (typeof node === 'string' || typeof node === 'number') { out.push(String(node)); return out }
+  if (Array.isArray(node)) { for (const child of node) treeText(child, out); return out }
+  if (Array.isArray(node.children)) { for (const child of node.children) treeText(child, out) }
+  return out
+}
+
+/** Every element in a rendered tree, depth first. */
+function treeNodes(node, out = []) {
+  if (node === null || node === undefined || typeof node !== 'object') return out
+  if (Array.isArray(node)) { for (const child of node) treeNodes(child, out); return out }
+  out.push(node)
+  if (Array.isArray(node.children)) { for (const child of node.children) treeNodes(child, out) }
+  return out
+}
+
+/** Drop one file, settle the upload, and return the drafts the dock wrote. */
+async function dropAndSettle(component, React, fileName, reply) {
+  installBrowser(() => reply)
+  const drafts = []
+  render(component, {
+    sessionId: 's1', inputActions: { setDraft(next) { drafts.push(next) } }, input: { draft: '' },
+  }, React)
+  listeners.get('drop')({
+    preventDefault() {},
+    dataTransfer: { types: ['Files'], files: [{ name: fileName, size: 4096 }] },
+  })
+  await new Promise(resolve => setTimeout(resolve, 20))
+  return drafts
+}
+
+await check('an uploaded document appears as a card with name, size and format badge', async () => {
+  installBrowser(() => ({ ok: true }))
+  const config = await loadBundle()
+  const React = makeReact()
+  const plugin = config.factory(() => React)
+  const component = mount(plugin)
+
+  const drafts = await dropAndSettle(component, React, 'report.pdf', {
+    ok: true, path: 'D:\\ws\\.dsh-drops\\report.pdf', name: 'report.pdf', bytes: 4096,
+  })
+  assert.equal(drafts.length, 1, 'the upload wrote the draft')
+
+  // The host echoes the new draft back through `input`; that is what the rail
+  // derives its cards from, so the second render is the real test.
+  const tree = render(component, {
+    sessionId: 's1', inputActions: { setDraft() {} }, input: { draft: drafts[0] },
+  }, React)
+  const text = treeText(tree)
+  assert.ok(text.includes('report.pdf'), `the card names the file: ${text.join(' | ')}`)
+  assert.ok(text.includes('PDF'), `the card carries a format badge: ${text.join(' | ')}`)
+  assert.ok(text.some(part => part.includes('4.0 KB')), `the card carries the size: ${text.join(' | ')}`)
+  const buttons = treeNodes(tree).filter(node => node.type === 'button')
+  assert.equal(buttons.length, 1, 'a card carries exactly one remove control')
+})
+
+await check('removing a card strips its reference and keeps the rest of the draft', async () => {
+  installBrowser(() => ({ ok: true }))
+  const config = await loadBundle()
+  const React = makeReact()
+  const plugin = config.factory(() => React)
+  const component = mount(plugin)
+
+  const drafts = []
+  const question = '这份文档说了什么？'
+  render(component, {
+    sessionId: 's1', inputActions: { setDraft(next) { drafts.push(next) } }, input: { draft: question },
+  }, React)
+  listeners.get('drop')({
+    preventDefault() {},
+    dataTransfer: { types: ['Files'], files: [{ name: 'report.pdf', size: 4096 }] },
+  })
+  await new Promise(resolve => setTimeout(resolve, 20))
+  assert.equal(drafts.length, 1, 'the upload appended a reference')
+
+  const tree = render(component, {
+    sessionId: 's1', inputActions: { setDraft(next) { drafts.push(next) } }, input: { draft: drafts[0] },
+  }, React)
+  const remove = treeNodes(tree).find(node => node.type === 'button')
+  assert.ok(remove !== undefined, 'the card has a remove control')
+  remove.props.onClick({ preventDefault() {}, stopPropagation() {} })
+
+  assert.equal(drafts.length, 2, 'removal writes the draft once')
+  assert.equal(drafts[1], question, 'only the reference went away; the question survived intact')
+})
+
+await check('a card follows the draft: deleting the reference by hand drops the card', async () => {
+  installBrowser(() => ({ ok: true }))
+  const config = await loadBundle()
+  const React = makeReact()
+  const plugin = config.factory(() => React)
+  const component = mount(plugin)
+
+  const drafts = await dropAndSettle(component, React, 'report.pdf', {
+    ok: true, path: 'D:\\ws\\.dsh-drops\\report.pdf', name: 'report.pdf', bytes: 4096,
+  })
+
+  const shown = render(component, {
+    sessionId: 's1', inputActions: { setDraft() {} }, input: { draft: drafts[0] },
+  }, React)
+  assert.ok(shown !== null, 'the card is visible while the reference is in the draft')
+
+  // The user deleted the reference themselves. The rail must agree with the
+  // draft rather than keep showing a document that will not be sent.
+  const hidden = render(component, {
+    sessionId: 's1', inputActions: { setDraft() {} }, input: { draft: 'reference removed' },
+  }, React)
+  assert.equal(hidden, null, 'no cards and no status renders nothing')
 })
 
 console.log('')
