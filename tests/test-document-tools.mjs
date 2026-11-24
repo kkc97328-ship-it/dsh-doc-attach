@@ -87,12 +87,14 @@ await check('a missing file yields an actionable sentence, not a stack trace', a
   assert.ok(out.includes('文件不存在'), out.slice(0, 120))
 })
 
-await check('a foreign container is refused by name, while .pptx is accepted', async () => {
-  // Retargeted once PowerPoint became readable: the intent is that an
-  // unsupported format is named rather than silently ignored, and that a
-  // now-supported one is no longer refused.
-  const foreign = await tools.read.execute({ path: join_(SCRATCH, 'book.xlsx') })
-  assert.ok(foreign.includes('.xlsx'), `message should name the format: ${foreign.slice(0, 140)}`)
+await check('a foreign container is refused by name, while .pptx and .xlsx are accepted', async () => {
+  // Retargeted twice — to .pptx's successor, then to .xlsx's. Each time the point
+  // is that an unsupported format is named rather than silently ignored, and a
+  // container that HAS gained a reader is no longer refused.
+  const workbook = await tools.read.execute({ path: join_(SCRATCH, 'book.xlsx') })
+  assert.ok(!workbook.includes('不支持'), `Excel must no longer be refused: ${workbook.slice(0, 140)}`)
+  const foreign = await tools.read.execute({ path: join_(SCRATCH, 'book.xls') })
+  assert.ok(foreign.includes('.xls'), `message should name the format: ${foreign.slice(0, 140)}`)
   assert.ok(foreign.includes('不支持'), foreign.slice(0, 140))
   const deck = await tools.read.execute({ path: join_(SCRATCH, 'deck.pptx') })
   assert.ok(!deck.includes('尚未实现') && !deck.includes('不支持'), deck.slice(0, 140))

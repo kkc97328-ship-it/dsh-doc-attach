@@ -30,9 +30,10 @@ const HERE = dirname(fileURLToPath(import.meta.url))
  */
 const SUITES = [
   ['client packaging contract (rows / entries / bundle)', 'test-composition.mjs', true],
-  ['extension consistency (four allow-lists agree)', 'test-extension-consistency.mjs', true],
+  ['extension consistency (generated allow-lists match formats.json)', 'test-extension-consistency.mjs', true],
   ['drop-ingest endpoint (upload + security)', 'test-drop-ingest.mjs', true],
   ['client bundle (drop / paste / upload / draft)', 'test-client-bundle.mjs', true],
+  ['spreadsheet .xlsx (rows / worksheets / citations)', 'test-xlsx-format.mjs', true],
   // Below: need this machine's fixtures (real PDFs, Office .doc/.ppt samples).
   ['document backend (extract / search / stats)', 'test-document-backend.mjs', false],
   ['legacy .doc (OLE2 container reader)', 'test-doc-format.mjs', false],

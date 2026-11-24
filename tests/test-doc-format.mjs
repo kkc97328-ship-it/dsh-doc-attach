@@ -147,8 +147,14 @@ await check('.pptx is no longer refused, and a foreign container still is', asyn
     !deck.includes('尚未实现') && !deck.includes('不支持'),
     `PowerPoint must no longer be refused: ${deck.slice(0, 140)}`,
   )
-  const foreign = await tools.read.execute({ path: join(SCRATCH, 'book.xlsx') })
-  assert.ok(foreign.includes('.xlsx'), `message should name the format: ${foreign.slice(0, 140)}`)
+  // Retargeted a second time, now that .xlsx HAS a reader: `.xls` is the legacy
+  // binary spreadsheet this build genuinely cannot read. Keeping both halves
+  // means the check still proves the pair — a supported container is accepted,
+  // and an unsupported one is refused by name.
+  const workbook = await tools.read.execute({ path: join(SCRATCH, 'book.xlsx') })
+  assert.ok(!workbook.includes('不支持'), `Excel must no longer be refused: ${workbook.slice(0, 140)}`)
+  const foreign = await tools.read.execute({ path: join(SCRATCH, 'book.xls') })
+  assert.ok(foreign.includes('.xls'), `message should name the format: ${foreign.slice(0, 140)}`)
   assert.ok(foreign.includes('不支持'), foreign.slice(0, 140))
 })
 

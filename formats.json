@@ -1,0 +1,13 @@
+{
+  "$comment": "Single source of truth for the containers this plugin reads. Every allow-list in the codebase is GENERATED from this file by `node scripts/sync-formats.mjs`; `tests/test-extension-consistency.mjs` fails when any copy is stale. Never edit a generated block by hand — edit this file and re-run the generator.",
+  "version": 1,
+  "formats": [
+    { "ext": ".pdf", "id": "pdf", "unit": "page", "label": "PDF" },
+    { "ext": ".docx", "id": "docx", "unit": "block", "label": "Word 2007+ (.docx)" },
+    { "ext": ".doc", "id": "doc", "unit": "block", "label": "Word 97-2003 (.doc)" },
+    { "ext": ".pptx", "id": "pptx", "unit": "slide", "label": "PowerPoint 2007+ (.pptx)" },
+    { "ext": ".ppt", "id": "ppt", "unit": "block", "label": "PowerPoint 97-2003 (.ppt)" },
+    { "ext": ".xlsx", "id": "xlsx", "unit": "row", "label": "Excel 2007+ (.xlsx)" }
+  ],
+  "foreign": [".xls", ".odt", ".rtf", ".txt", ".md"]
+}

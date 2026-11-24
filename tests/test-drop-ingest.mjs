@@ -17,10 +17,11 @@ import { fileURLToPath } from 'node:url'
 import { apply, buildHandler } from '../plugins/drop-ingest.mjs'
 
 // The sandbox lives beside the package rather than under os.tmpdir(): on
-// Windows tmpdir() can hand back an 8.3 short spelling (LIJIA-~1) which
-// fs.realpathSync does not expand, while the plugin's async realpath does.
-// That discrepancy is an artifact of the test harness, not of the endpoint,
-// and a normal workspace path keeps these assertions about containment.
+// Windows tmpdir() can hand back an 8.3 short spelling of the user's profile
+// directory, which fs.realpathSync does not expand, while the plugin's async
+// realpath does. That discrepancy is an artifact of the test harness, not of
+// the endpoint, and a normal workspace path keeps these assertions about
+// containment.
 const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SANDBOX = mkdtempSync(join(PACKAGE_ROOT, '_tmp-drop-'))
 const WORKSPACE = join(SANDBOX, 'workspace')

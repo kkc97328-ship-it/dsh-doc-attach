@@ -38,11 +38,13 @@ const DEFAULT_CONFIG = {
   /** Subdirectory created inside the workspace for landed documents. */
   dropDirName: '.dsh-drops',
   /**
-   * Accepted extensions. Keep in step with `read-document.mjs`'s READABLE set
-   * and the browser bundle's ACCEPTED list (guarded by
-   * `tests/test-extension-consistency.mjs`).
+   * Accepted extensions. GENERATED from formats.json — do not hand-edit; the
+   * generator rewrites this block and `tests/test-extension-consistency.mjs`
+   * fails when it is stale.
    */
-  extensions: ['.pdf', '.docx', '.doc', '.pptx', '.ppt'],
+  // BEGIN GENERATED:extensions — source: formats.json; run `node scripts/sync-formats.mjs`
+  extensions: ['.pdf', '.docx', '.doc', '.pptx', '.ppt', '.xlsx'],
+  // END GENERATED:extensions — source: formats.json; run `node scripts/sync-formats.mjs`
   /** Decoded upload ceiling. */
   maxBytes: 64 * 1024 * 1024,
   /** Request body ceiling (base64 inflates the wire form). */

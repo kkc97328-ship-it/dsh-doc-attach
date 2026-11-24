@@ -17,12 +17,20 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url))
-/** Where the profile installs it; live checks are skipped when absent. */
-const INSTALLED = 'C:\\Users\\LiJia-Chen\\.dsh\\profiles\\web\\node_modules\\dsh-doc-attach'
+/**
+ * Where a profile would install it; the live checks are skipped when absent.
+ *
+ * Derived rather than hard-coded, so no developer's home directory ends up in
+ * a public repository. In CI the path does not exist and those checks skip,
+ * which is the intended behaviour.
+ */
+const INSTALLED = process.env.DSH_DOC_INSTALLED
+  ?? join(homedir(), '.dsh', 'profiles', 'web', 'node_modules', 'dsh-doc-attach')
 
 let passed = 0
 let failed = 0

@@ -415,13 +415,35 @@ def blocks_from_presentation(path: str, fmt: str):
         return None, (exc.code, str(exc))
 
 
+def blocks_from_xlsx(path: str):
+    """Extract spreadsheet rows. @returns (blocks, error).
+
+    One block per non-empty row, tagged with its worksheet and row number, so a
+    citation can read "Sheet1!第 12 行" instead of an opaque block index. Loaded
+    lazily for the same reason as the presentation reader: a deployment missing
+    xlsx_reader.py still reads PDF and the Office formats.
+    """
+    try:
+        import xlsx_reader
+    except ImportError as exc:
+        return None, ("BACKEND_UNAVAILABLE", f"xlsx_reader.py is not importable: {exc}")
+    try:
+        return xlsx_reader.xlsx_blocks(path), None
+    except xlsx_reader.DocError as exc:
+        return None, (exc.code, str(exc))
+
+
 # ── loader ────────────────────────────────────────────────────────────────
+# GENERATED from formats.json — do not hand-edit. `tests/test-extension-
+# consistency.mjs` fails when this block is stale.
+# BEGIN GENERATED:maps — source: formats.json; run `node scripts/sync-formats.mjs`
 FORMAT_BY_EXT = {
     ".pdf": "pdf",
     ".docx": "docx",
     ".doc": "doc",
     ".pptx": "pptx",
     ".ppt": "ppt",
+    ".xlsx": "xlsx",
 }
 # A .pptx has real slides; a legacy .ppt does not expose a reliable slide
 # number, so its unit is the block its reader actually produces.
@@ -431,7 +453,9 @@ UNIT_BY_FORMAT = {
     "doc": "block",
     "pptx": "slide",
     "ppt": "block",
+    "xlsx": "row",
 }
+# END GENERATED:maps — source: formats.json; run `node scripts/sync-formats.mjs`
 
 
 def load_document(path: str):
@@ -458,6 +482,8 @@ def load_document(path: str):
         blocks, error = blocks_from_doc(path)
     elif fmt in ("pptx", "ppt"):
         blocks, error = blocks_from_presentation(path, fmt)
+    elif fmt == "xlsx":
+        blocks, error = blocks_from_xlsx(path)
     else:
         blocks, error = blocks_from_docx(path)
 
@@ -528,7 +554,9 @@ def mode_extract(payload: dict, args: argparse.Namespace) -> None:
         # Structural fields a reader produces must survive this projection.
         # Omitting `slide`/`title` here dropped a presentation's real slide
         # number and its title, leaving the caller with an opaque block index.
-        for extra in ("level", "row", "slide", "title", "warning"):
+        # `sheet` is the spreadsheet equivalent of `slide` and is forwarded for
+        # exactly the same reason.
+        for extra in ("level", "row", "sheet", "slide", "title", "warning"):
             if extra in block:
                 row[extra] = block[extra]
         window.append(row)
@@ -608,7 +636,7 @@ def mode_search(payload: dict, args: argparse.Namespace) -> None:
         first = matches[0]
         start = max(0, first.start() - args.context)
         end = min(len(text), first.end() + args.context)
-        hits.append({
+        hit = {
             "block": position + 1,
             "kind": block.get("kind", "paragraph"),
             "offset": first.start(),
@@ -616,7 +644,14 @@ def mode_search(payload: dict, args: argparse.Namespace) -> None:
             "occurrences": len(matches),
             "snippet": re.sub(r"\s+", " ", text[start:end]).strip(),
             "heading": heading_breadcrumb(blocks, position),
-        })
+        }
+        # Same rule as mode_extract: a structural location the reader produced
+        # must reach the caller. Without it a spreadsheet hit can only be cited
+        # by an opaque block index, and a deck hit loses its slide number.
+        for extra in ("row", "sheet", "slide"):
+            if extra in block:
+                hit[extra] = block[extra]
+        hits.append(hit)
 
     emit({
         "ok": True,

@@ -35,17 +35,20 @@ export const name = 'dsh-doc-attach'
 /** The tools registry is the only service this plugin consumes. */
 export const inject = ['tools']
 
-/**
- * Containers this build can read.
- *
- * Kept in step with `drop-ingest.mjs`'s `extensions` and the browser bundle's
- * `ACCEPTED` list by `tests/test-extension-consistency.mjs`: three copies of
- * one fact drifted apart once already, and a `.doc` the tools could read was
- * still refused at the drop target.
- */
-const READABLE = new Set(['.pdf', '.docx', '.doc', '.pptx', '.ppt'])
-/** Containers this plugin will never handle. */
-const FOREIGN = new Set(['.xls', '.xlsx', '.odt', '.rtf', '.txt', '.md'])
+// Containers this build can read, and the ones it deliberately refuses.
+//
+// The same fact is consumed by five files that cannot import one another — the
+// browser half is a classic script with no module graph, and the backend is
+// Python — so `formats.json` is the single source and these blocks are GENERATED
+// from it. `tests/test-extension-consistency.mjs` fails when a copy drifts,
+// which is how a `.doc` the tools could read was once refused at the drop target.
+// BEGIN GENERATED:readable — source: formats.json; run `node scripts/sync-formats.mjs`
+const READABLE = new Set(['.pdf', '.docx', '.doc', '.pptx', '.ppt', '.xlsx'])
+// END GENERATED:readable — source: formats.json; run `node scripts/sync-formats.mjs`
+
+// BEGIN GENERATED:foreign — source: formats.json; run `node scripts/sync-formats.mjs`
+const FOREIGN = new Set(['.xls', '.odt', '.rtf', '.txt', '.md'])
+// END GENERATED:foreign — source: formats.json; run `node scripts/sync-formats.mjs`
 
 const DEFAULT_CONFIG = {
   /** Interpreter that can run document_helper.py; discovery runs when unset. */
@@ -67,11 +70,11 @@ const DEFAULT_CONFIG = {
 /**
  * What one block means, keyed by the backend's `unit` value.
  *
- * The key must be the UNIT ('page'/'block'/'slide'), not the format: keying it
- * by format silently degraded every PDF to the fallback word, which is how a
- * 53-page paper came to be described as "53 块".
+ * The key must be the UNIT ('page'/'block'/'slide'/'row'), not the format:
+ * keying it by format silently degraded every PDF to the fallback word, which
+ * is how a 53-page paper came to be described as "53 块".
  */
-const UNIT_WORD = { page: '页', block: '块', slide: '页' }
+const UNIT_WORD = { page: '页', block: '块', slide: '页', row: '行' }
 
 /** Human-readable byte size. */
 function humanSize(n) {
@@ -99,6 +102,9 @@ function toAbsolute(raw) {
  * @returns {string | null} a problem description, or null when usable.
  */
 function describePathProblem(abs) {
+  // Spelled from the generated allow-list so the advice cannot go stale: this
+  // sentence used to name three formats while the build read five.
+  const readableLabel = [...READABLE].join(' / ')
   if (abs === '') return '路径为空。请传入文档的绝对路径。'
   const ext = extname(abs).toLowerCase()
   if (READABLE.has(ext)) {
@@ -106,17 +112,21 @@ function describePathProblem(abs) {
     return null
   }
   if (FOREIGN.has(ext)) {
-    return `不支持的格式 ${ext}：本工具只读 PDF、Word 与 PowerPoint。纯文本文件请直接用 read 工具，图片请直接拖入（走图片通道）。`
+    return `不支持的格式 ${ext}：本工具只读 ${readableLabel}。纯文本文件请直接用 read 工具，图片请直接拖入（走图片通道）。`
   }
-  return `不支持的扩展名“${ext || '(无)'}”；本工具只读 PDF、Word 与 PowerPoint。`
+  return `不支持的扩展名“${ext || '(无)'}”；本工具只读 ${readableLabel}。`
 }
 
 /**
  * Build one tools-registry entry set for a config.
- * @param {object} cfg - resolved configuration.
+ * @param {object} [config] - configuration overriding {@link DEFAULT_CONFIG}.
  * @returns {{ outline: object, search: object, read: object, backend: PythonDocumentBackend }} tools and backend.
  */
-function buildTools(cfg) {
+function buildTools(config = {}) {
+  // Merge here instead of trusting the caller. `buildTools` is exported for
+  // tests, and a partial config used to reach the backend as `--max-hits NaN`,
+  // which killed the helper instead of reporting a bad argument.
+  const cfg = { ...DEFAULT_CONFIG, ...config }
   const backend = new PythonDocumentBackend({
     pythonPath: cfg.pythonPath,
     cacheDir: cfg.cacheDir,
@@ -152,7 +162,9 @@ function buildTools(cfg) {
   const unitOf = result => UNIT_WORD[result.unit] ?? '块'
 
   const pathParams = {
-    path: { type: 'string', description: '文档的绝对路径（也接受相对当前工作目录的路径）。支持 PDF 与 Word(.docx)。' },
+    // Built from the generated READABLE set so the advertised formats can never
+    // drift from what this build actually dispatches.
+    path: { type: 'string', description: `文档的绝对路径（也接受相对当前工作目录的路径）。支持 ${[...READABLE].join(' / ')}。` },
   }
 
   const outline = {
@@ -181,6 +193,23 @@ function buildTools(cfg) {
         : ''
       return `文档：${abs}\n共 ${stats.blockCount} ${unit}　总字符数：${stats.totalChars}${empty}${heading}\n\n下一步建议：用 document_search 按关键词定位问题相关段落（它会告诉你第几${unit}、以及所属标题），再用 document_read 精读命中位置。`
     },
+  }
+
+  /**
+   * The human coordinate a reader reported for one block, or '' when it has none.
+   *
+   * Block indexes are this tool's own counter across the whole document; a
+   * worksheet row and a slide number are coordinates the user can look up. Show
+   * the real one whenever it exists.
+   * @param {object} item - a hit or a block from the backend.
+   * @returns {string} e.g. "报名记录 第 12 行", "第 3 张幻灯片", or ''.
+   */
+  function placeOf(item) {
+    if (item.sheet !== undefined) {
+      return item.row === undefined ? `${item.sheet}` : `${item.sheet} 第 ${item.row} 行`
+    }
+    if (item.slide !== undefined) return `第 ${item.slide} 张幻灯片`
+    return ''
   }
 
   const search = {
@@ -220,7 +249,14 @@ function buildTools(cfg) {
       }
       const lines = result.hits.map((hit) => {
         const times = hit.occurrences > 1 ? `（本块出现 ${hit.occurrences} 次）` : ''
-        const where = hit.heading ? `　所属标题：${hit.heading}` : ''
+        // A hit's block index is this tool's own counter. When the reader also
+        // reported a human coordinate (a worksheet row, a slide number), show
+        // it: "报名记录 第 12 行" is citable, "第 9 行" is not.
+        const place = placeOf(hit)
+        const bits = []
+        if (place !== '') bits.push(`位置：${place}`)
+        if (hit.heading) bits.push(`所属标题：${hit.heading}`)
+        const where = bits.length > 0 ? `　${bits.join('　')}` : ''
         return `第 ${hit.block} ${unit}${times}${where}\n  …${hit.snippet}…`
       })
       const more = result.truncated ? `\n（命中已达上限 ${result.hitCount} 条，可能还有更多；可提高 maxHits，或直接指定位置精读）` : ''
@@ -254,11 +290,14 @@ function buildTools(cfg) {
       const chunks = []
       let truncatedBlocks = 0
       for (const block of result.blocks) {
-        const label = block.kind === 'heading'
-          ? `第 ${block.index} ${unit}【标题 L${block.level}】`
-          : block.kind === 'table'
-            ? `第 ${block.index} ${unit}【表格行】`
-            : `第 ${block.index} ${unit}`
+        const place = placeOf(block)
+        let label
+        if (block.kind === 'heading') label = `第 ${block.index} ${unit}【标题 L${block.level}】`
+        else if (block.kind === 'table') label = `第 ${block.index} ${unit}【表格行】`
+        // A spreadsheet row's real coordinate is (worksheet, row number); the
+        // block index alone would not let a reader find it in Excel.
+        else if (block.kind === 'row' && place !== '') label = `第 ${block.index} ${unit}（${place}）`
+        else label = `第 ${block.index} ${unit}`
         let text = block.text.trim()
         if (text === '') {
           chunks.push(`—— ${label} ——\n（本块无文本；可能是图片页或扫描页，当前版本不做 OCR）`)

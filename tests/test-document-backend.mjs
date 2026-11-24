@@ -213,11 +213,11 @@ await check('a .docx that is not a zip rejects as UNREADABLE', async () => {
 })
 
 await check('a container with no reader rejects with UNSUPPORTED_FORMAT', async () => {
-  // Retargeted from .pptx, which now HAS a reader, to a format the backend
-  // genuinely does not handle — the assertion is about the error code the
-  // loader returns for an unknown container, not about PowerPoint.
+  // Retargeted twice: .pptx gained a reader, then .xlsx gained one. `.xls` is a
+  // legacy binary spreadsheet with no reader, so the assertion still exercises
+  // the error code the loader returns for an unknown container.
   await assert.rejects(
-    () => backend().stats(join(SCRATCH, 'sheet.xlsx')),
+    () => backend().stats(join(SCRATCH, 'book.xls')),
     (error) => error instanceof DocumentExtractionError && error.code === 'UNSUPPORTED_FORMAT',
   )
 })
@@ -230,7 +230,7 @@ await check('an out-of-range window rejects with BAD_RANGE', async () => {
 })
 
 await check('an unusable interpreter rejects with BACKEND_UNAVAILABLE', async () => {
-  const missing = new PythonDocumentBackend({ pythonPath: 'D:\\workspace\\definitely-not-python.exe' })
+  const missing = new PythonDocumentBackend({ pythonPath: join(SCRATCH, 'definitely-not-python.exe') })
   await assert.rejects(
     () => missing.probe(),
     (error) => error instanceof DocumentExtractionError && error.code === 'BACKEND_UNAVAILABLE',
